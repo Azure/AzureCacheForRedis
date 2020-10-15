@@ -105,3 +105,25 @@ Similarly, there will be a notification message that is received when the mainte
                     circuitBroken = true;
                     Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] Breaking circuit since update coming at {newMessage.StartTimeInUTC}");
                 }
+                
+                
+
+### Clustered cache: targeted circuit breaking for StackExchange.Redis
+
+In the case of clustered caches, since only one of the shards is going to have availability issues at a time. It is possible to only stop calls going to the specific shard instead of all the calls. You can do this by hashing the key and figuring out the endpoint.
+
+            var multiplexer = ConnectionMultiplexer.Connect(configuration);
+            // Ideally clusterConfig is stored and not executed every single time, since it can be expensive
+            var lastKnownClusterConfig = multiplexer.GetServer(configuration.EndPoints.FirstOrDefault()).ClusterNodes();
+
+            var endpoint = (System.Net.IPEndPoint) lastKnownClusterConfig.GetBySlot(key).EndPoint;
+            
+            // Figure out the shardId from Port number
+            // Use 13000 instead of 15000 below if communicating over non-SSL
+            var shardId = (endpoint.Port - 15000) / 2;
+
+            // Compare this to the shardId of the failing endpoint (SSLPort - 15000)/2  from the AzureRedisEvent above
+            if (shardId == failingShardId) 
+            {
+                // Don't send the operation.
+            }
