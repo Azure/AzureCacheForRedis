@@ -110,7 +110,11 @@ Similarly, there will be a notification message that is received when the mainte
 
 ### Clustered cache: targeted circuit breaking for StackExchange.Redis
 
-In the case of clustered caches, since only one of the shards is going to have availability issues at a time. It is possible to only stop calls going to the specific shard instead of all the calls. You can do this by hashing the key and figuring out the endpoint.
+In the case of clustered caches, since only one of the shards is going to have availability issues at a time. It is possible to only stop calls going to the specific shard instead of all the calls. You can do this by hashing the key and figuring out the endpoint. Below is a snippet to figure out how to hash keys and stop them when they are headed to the failiing shard. 
+
+You can start sending requests again to this shard after the client application detects the new configuration. This can usually take anywhere from 1 second to 30-40 seconds. To improve this, you need to enable periodic configuration refresh on [Lettuce](<https://github.com/lettuce-io/lettuce-core/wiki/Client-options#cluster-specific-options>) and set refreshPeriod interval to preferably less than 3 seconds. On StackExchange.Redis, [configCheckSeconds](<https://stackexchange.github.io/StackExchange.Redis/Configuration>). should be set to  less than 3 seconds.
+
+So after 2 seconds (or whatever your refresh period), you should be able to send requests to this shard without getting any exceptions. 
 
             var multiplexer = ConnectionMultiplexer.Connect(configuration);
             // Ideally clusterConfig is stored and not executed every single time, since it can be expensive
