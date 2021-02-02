@@ -89,7 +89,6 @@ Similarly, there will be a notification message that is received when the mainte
 
         NotificationType|NodeMaintenanceEnded|StartTimeInUTC|2020-10-14T16:27:42|IsReplica|True|IPAddress|52.158.249.185|SSLPort|15001|NonSSLPort|13001
 
-
 ## Sample code to listen to the *AzureRedisEvents* 
 
             var sub = multiplexer.GetSubscriber();
@@ -102,11 +101,9 @@ Similarly, there will be a notification message that is received when the mainte
                     var delay = newMessage.StartTimeInUTC.Subtract(DateTime.UtcNow) - TimeSpan.FromSeconds(1);
                     Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] Waiting for {delay.TotalSeconds} seconds before breaking circuit");
                     await Task.Delay(delay);
-                    circuitBroken = true;
                     Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] Breaking circuit since update coming at {newMessage.StartTimeInUTC}");
                 }
-                
-                
+            });
 
 ### Clustered cache: targeted circuit breaking for StackExchange.Redis
 
