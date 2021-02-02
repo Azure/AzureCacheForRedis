@@ -5,9 +5,12 @@ This repo is designed as a resource for developers building applications that us
 Feel free to create an issue if you have a question, suggestion, or would like to report an issue to the Azure Cache team. We welcome feedback on the cache product itself, the contents of this repo, or anything else. 
 
 ### Table of contents: 
-- [AzureRedisEvents.md](AzureRedisEvents.md), a pub/sub channel that applications can use to receive notifications about upcoming server maintenance events
+- [AzureRedisEvents.md](AzureRedisEvents.md)
+  - A pub/sub channel that applications can use to receive notifications about upcoming server maintenance events
 - [Lettuce Best Practices.md](Lettuce%20Best%20Practices.md)
+  - Best practices for using the [Lettuce](https://lettuce.io/) client library to connect to an Azure Redis Cache from within a Java application
 - [FAQ.md](FAQ.md)
+  - Frequently asked questions (and answers!)
 
 ## Contributing
 
