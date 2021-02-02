@@ -1,14 +1,13 @@
-# Project
+## Welcome! 
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This repo is designed as a resource for developers building applications that use an Azure Cache for Redis. It includes detailed documentation, samples, and best practices to help your application get the most benefit out of cache features.
 
-As the maintainer of this project, please make a few updates:
+Feel free to create an issue if you have a question, suggestion, or would like to report an issue to the Azure Cache team. We welcome feedback on the cache product itself, the contents of this repo, or anything else. 
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+Table of contents: 
+- [AzureRedisEvents.md](AzureRedisEvents.md), a pub/sub channel that applications can use to receive notifications about upcoming server maintenance events
+- [Lettuce Best Practices.md](Lettuce%20Best%20Practices.md)
+- [FAQ.md](FAQ.md)
 
 ## Contributing
 
