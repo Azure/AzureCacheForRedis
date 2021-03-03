@@ -17,37 +17,50 @@ You can use the following C# sample class to parse the message into a simple Azu
     public class AzureRedisEvent
     {
         public AzureRedisEvent(string message)
-        {
-            var info = message.Split('|');
-            for (int i = 0; i < info.Length / 2; i++)
+        {        
+            try
             {
-                var key = info[2 * i];
-                var value = info[2 * i + 1];
-                switch (key)
+                var info = message?.Split('|');
+                for (int i = 0; i < info?.Length / 2; i++)
                 {
-                    case "NotificationType":
-                        NotificationType = value;
-                        break;
-                    case "StartTimeInUTC":
-                        StartTimeInUTC = DateTime.Parse(value);
-                        break;
-                    case "IsReplica":
-                        IsReplica = bool.Parse(value);
-                        break;
-                    case "IPAddress":
-                        IPAddress = value;
-                        break;
-                    case "SSLPort":
-                        SSLPort = Int32.Parse(value);
-                        break;
-                    case "NonSSLPort":
-                        NonSSLPort = Int32.Parse(value);
-                        break;
-                    default:
-                        Console.WriteLine($"Unexpected i={i}, case {key}");
-                        break;
+                    string key = null, value = null;
+                    if (2 * i < info.Length) { key = info[2 * i].Trim(); }
+                    if (2 * i + 1 < info.Length) { value = info[2 * i + 1].Trim(); }
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                    {
+                        switch (key.ToLowerInvariant())
+                        {
+                            case "notificationtype":
+                                NotificationType = value;
+                                break;
+                            case "starttimeinutc":
+                                DateTimeOffset.TryParse(value, out StartTime);
+                                break;
+                            case "isreplica":
+                                bool.TryParse(value, out IsReplica);
+                                break;
+                            case "ipaddress":
+                                IPAddress.TryParse(value, out IpAddress);
+                                break;
+                            case "sslport":
+                                Int32.TryParse(value, out var port);
+                                break;
+                            case "nonsslport":
+                                Int32.TryParse(value, out var nonsslport);
+                                break;
+                            default:
+                                Console.WriteLine($"Unexpected i={i}, case {key}");
+                                break;
+                        }
+                    }
                 }
             }
+            catch(Exception ex)
+            {
+                ....
+            }
+            
+            
         }
         public readonly string NotificationType;
         public readonly DateTime StartTimeInUTC;
