@@ -12,6 +12,13 @@ Feel free to create an issue if you have a question, suggestion, or would like t
 - [FAQ.md](FAQ.md)
   - Frequently asked questions (and answers!)
 
+### Additional resources:
+
+- [Quickstarts](https://github.com/Azure-Samples/azure-cache-redis-samples)
+  - Small projects that demonstrate the essential steps to incorporate Azure Cache for Redis into an app.
+- [Samples](https://github.com/Azure-Samples/azure-cache-redis-samples)
+  - Sample projects that demonstrate additional usage patterns for Azure Cache for Redis.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
