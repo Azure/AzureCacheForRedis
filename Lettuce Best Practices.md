@@ -109,7 +109,10 @@ After that we create Cluster specific settings to detect configuration changes q
                 .enableAllAdaptiveRefreshTriggers().build();
 
         redisClient.setOptions(ClusterClientOptions.builder()
-                .topologyRefreshOptions(refreshOptions).build());
+              .socketOptions(SocketOptions.builder()              
+              .keepAlive(true)
+              .build())
+              .topologyRefreshOptions(refreshOptions).build());
 
         RedisAdvancedClusterCommands<String, String> syncCommands = connection.sync();
         RedisAdvancedClusterAsyncCommands<String, String> asyncCommands = connection.async();
