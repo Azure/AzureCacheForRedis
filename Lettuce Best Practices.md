@@ -29,6 +29,12 @@ This is rather simple. To get started you need:
                 .build();
 
         RedisClient redisClient = RedisClient.create(redisURI);
+        
+        redisClient.setOptions(ClientOptions.builder()
+        .socketOptions(SocketOptions.builder()
+              .keepAlive(true)
+              .build()))
+              
         StatefulRedisConnection<String, String> connection = redisClient.connect();
         RedisCommands<String,String> syncCommands = connection.sync();
         RedisAsyncCommands<String,String> asyncCommands = connection.async();
