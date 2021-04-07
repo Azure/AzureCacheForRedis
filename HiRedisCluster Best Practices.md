@@ -4,7 +4,7 @@
 
     Hireredis-cluster supports manually batching of requests to enhance pipelining.  Following is a sample code with pipelining of 4 requests.
 
-### Code snippet to get started on Lettuce with Azure.
+### Code snippet to get started on HiRedisCluster with Azure.
 
        	redisClusterAppendCommand(conn, "SET %s %s", "test", "value");
 		redisClusterAppendCommand(conn, "SET %s %s", "key", "value");
