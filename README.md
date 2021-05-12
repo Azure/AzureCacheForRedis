@@ -11,6 +11,8 @@ Feel free to create an issue if you have a question, suggestion, or would like t
   - Best practices for using the [Lettuce](https://lettuce.io/) client library to connect to an Azure Redis Cache from within a Java application
 - [FAQ.md](FAQ.md)
   - Frequently asked questions (and answers!)
+- [WhatsNew.md](WhatsNew.md)
+  - Current preview features, new GA features, and other updates
 
 ### Additional resources:
 
