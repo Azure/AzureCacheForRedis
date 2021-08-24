@@ -1,6 +1,6 @@
 # Migrate to the new Redis Enterprise Private DNS Zone
 
-This document is meant to help you migrate from an old form of the Private DNS Zone that is required to make private endpoints work with Redis Enterprise caches to a new form. Throughout this process, your infrastructure will continue to work as expected.
+This document is meant to help you migrate from an old form of the Private DNS Zone that is required to make private endpoints work with Redis Enterprise caches to a new form. The new form is a little simpler, better aligns with other services in Azure, and enables the automatic management of A records in the Private DNS Zone. Throughout this process, your infrastructure will continue to work as expected.
 
 ## How to migrate to the new private DNS zone
 
@@ -24,11 +24,11 @@ This document is meant to help you migrate from an old form of the Private DNS Z
         registration" unchecked. Click **OK**.
         ![](images/media/image2.png)
 
-4. For each private endpoint linked to that VNet, create a new A-Record
+4. For each private endpoint linked to that VNet, create a new A record
     using the "DNS Configuration" setting on the left in the portal.
 
     - Go to the private endpoint page for each private endpoint and click
-        "DNS Configuration" on the left.
+        **DNS Configuration** on the left.
 
     - Select **Add configuration**. For `Private DNS zone`, fill in
         your newly created zone. `DNS zone group` should be set to
@@ -36,14 +36,14 @@ This document is meant to help you migrate from an old form of the Private DNS Z
 
         ![](images/media/image3.png)
 
-    - This adds an A-Record that matches this pattern:
+    - This adds an A record that matches this pattern:
 
         ```{cacheName}.{region} -> {private IP address of endpoint}```
 
---**NOTE**-- If you don't follow this procedure and create the
-        A-Record normally, you would still have a working private
-        endpoint, but deleting that endpoint does not result in the
-        deletion of the corresponding A-Record.
+>**NOTE**: If you don't follow this procedure and create the
+> A record normally, you would still have a working private
+> endpoint, but deleting that endpoint does not result in the
+> deletion of the corresponding A record.
 
 ## Testing your migration
 
@@ -66,13 +66,13 @@ it's time to test whether it works.
 If the steps above do not work, try re-attaching the old region-prefixed
 private DNS zones to fix the issue as a temporary solution.
 
---**NOTE**-- DNS resolution of private zones prefers the longer
-    (more-specific) DNS zones if more than one is linked to a VNet. This
-    means that if the
-    `{region}.privatelink.redisenterprise.cache.``azure``.net` and
-    `privatelink.redisenterprise.cache.windows.net` are both connected,
-    only the `{region}.privatelink.redisenterprise.cache.``azure``.net`
-    zone is respected.
+>**NOTE**: DNS resolution of private zones prefers the longer
+> (more-specific) DNS zones if more than one is linked to a VNet. This
+> means that if the
+> `{region}.privatelink.redisenterprise.cache.``azure``.net` and
+> `privatelink.redisenterprise.cache.windows.net` are both connected,
+> only the `{region}.privatelink.redisenterprise.cache.``azure``.net`
+> zone is respected.
 
 ## Cleanup
 
