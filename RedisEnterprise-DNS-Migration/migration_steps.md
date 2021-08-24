@@ -69,9 +69,9 @@ private DNS zones to fix the issue as a temporary solution.
 --**NOTE**-- DNS resolution of private zones prefers the longer
     (more-specific) DNS zones if more than one is linked to a VNet. This
     means that if the
-    `{region}.privatelink.redisenterprise.cache.``azure``.net` and
+    `{region}.privatelink.redisenterprise.cache.azure.net` and
     `privatelink.redisenterprise.cache.windows.net` are both connected,
-    only the `{region}.privatelink.redisenterprise.cache.``azure``.net`
+    only the `{region}.privatelink.redisenterprise.cache.azure.net`
     zone is respected.
 
 ## Cleanup
