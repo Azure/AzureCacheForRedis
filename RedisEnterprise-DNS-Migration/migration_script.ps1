@@ -303,11 +303,10 @@ function TagAndRemoveLinksFromOldZones($vnetToZoneMap) {
                             Remove-AzPrivateDnsVirtualNetworkLink -ResourceGroupName $zone.ResourceGroupName -ZoneName $zone.Name -Name $link.Name | Out-Null
                             Write-Host "Tagging old zone with information about the vnet is was linked to. It can be reconnected if needed" -ForegroundColor Yellow
                             $oldTags = Get-AzTag -ResourceId $zone.ResourceId
-                            $oldValue = $oldTags.Properties.TagsProperty.OldVnetLink -split ","
-                            $oldValue = $oldValue + $vnet.Name # Append new vnet name to list
-                            $oldValue = @($oldValue | Where-Object { $_ } | Sort-Object | Select-Object -Unique) # Make sure new list values are non-empty and unique
-                            $Tags = @{"OldVnetLink" = $oldValue -join ","}
-                            New-AzTag -ResourceId $zone.ResourceId -Tag $Tags
+                            $oldTags
+                            $VnetName = (Get-AzResource -ResourceId $vnet.Name).Name
+                            $Tags = @{"OldVnetLink-$VnetName" = $vnet.Name}
+                            Update-AzTag -ResourceId $zone.ResourceId -Tag $Tags -Operation Merge
                         }
                     }
                 }
