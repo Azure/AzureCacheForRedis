@@ -17,7 +17,8 @@ This document is meant to help you migrate from an old form of the Private DNS Z
 
     - Go to the Private DNS zone page for each newly created zone and
         click 'Virtual network links' on the
-        left.![](images/media/image1.png)
+        left.
+        ![](images/media/image1.png)
 
     - Fill in the "Link Name" with a value of your choosing, "Virtual
         Network" with the VNet being linked, and leave "Enable auto
@@ -69,9 +70,9 @@ private DNS zones to fix the issue as a temporary solution.
 >**NOTE**: DNS resolution of private zones prefers the longer
 > (more-specific) DNS zones if more than one is linked to a VNet. This
 > means that if the
-> `{region}.privatelink.redisenterprise.cache.``azure``.net` and
+> `{region}.privatelink.redisenterprise.cache.azure.net` and
 > `privatelink.redisenterprise.cache.windows.net` are both connected,
-> only the `{region}.privatelink.redisenterprise.cache.``azure``.net`
+> only the `{region}.privatelink.redisenterprise.cache.azure.net`
 > zone is respected.
 
 ## Cleanup

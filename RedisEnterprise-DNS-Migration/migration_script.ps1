@@ -143,7 +143,7 @@ function Initialize-PrivateDnsZoneMap() {
 }
 
 # This function loops through each VNet, 
-# extracts the correct zone name from the resoruces attached to private endpoints (which are enterprise caches), 
+# extracts the correct zone name from the resources attached to private endpoints (which are enterprise caches), 
 # creates or confirms the zones exist, 
 # Links the zones to their VNets
 # and then ensures the zones have the correct Dns zone groups (A records)
@@ -201,7 +201,7 @@ function Migrate-Vnets($PrivateLinkMap, $PrivateDnsZonesMap) {
                         
                         $shouldProceed = ShouldRemovePrivateDnsZoneGroup $existingGroup $privateLink $newZone
                         if ($shouldProceed) {
-                            Write-Host "Removing old Dns zone group (A record) for private endpoint '$($privateLink.Name)'" -ForegroundColor Yellow
+                            Write-Host "Removing old DNS zone group (A record) from private endpoint '$($privateLink.Name)'" -ForegroundColor Yellow
                             Remove-AzPrivateDnsZoneGroup -PrivateEndpointName $privateLink.Name -Name $existingGroup.Name -ResourceGroupName $privateLink.ResourceGroupName -Force
                         } 
                     } else {
@@ -210,7 +210,7 @@ function Migrate-Vnets($PrivateLinkMap, $PrivateDnsZonesMap) {
                         $shouldProceed = AskForConfirmation "Private endpoint '$($privateLink.Name)' has no associated Dns zone group. These groups automatically manage the A records creation and deletion for the private endpoint. Do you want to create a new one?"
                     }
                     if($shouldProceed) {
-                            Write-Host "Creating new Dns zone group (A record) for private endpoint '$($privateLink.Name)'" -ForegroundColor Yellow
+                            Write-Host "Creating new DNS zone group (A record) for private endpoint '$($privateLink.Name)'" -ForegroundColor Yellow
                             New-AzPrivateDnsZoneGroup -ResourceGroupName $privateLink.ResourceGroupName -PrivateEndpointName $privateLink.Name -Name ($privateLink.Name + "-" + $privateDnsZoneConfig.Name) -PrivateDnsZoneConfig $privateDnsZoneConfig
                     }
                 }
@@ -222,22 +222,22 @@ function Migrate-Vnets($PrivateLinkMap, $PrivateDnsZonesMap) {
 }
 
 function ShouldRemovePrivateDnsZoneGroup($existingGroup, $privateLink, $newZone) {
-    if ( $null -eq $existingGroup.PrivateDnsZoneConfigs) {
-                            
+    if (!$shouldProceed -and $null -eq $existingGroup.PrivateDnsZoneConfigs) {
+                                
         Write-Host "[Step 4 under section 'How to migrate to the new private DNS zone' in migration document]" -ForegroundColor Yellow
-        return AskForConfirmation "Private endpoint '$($privateLink.Name)' is already tied to a Dns zone group (A record) which has no associated DNS zones. Do you want to remove the existing group and add a new one?"
+        return AskForConfirmation "Private endpoint '$($privateLink.Name)' already has a DNS zone group. The existing group has no associated DNS zones. Do you want to remove the existing group from this private endpoint and add a new one that includes the new DNS zone so that the A record will be managed automatically?"
     }
-    if (!($existingGroup.PrivateDnsZoneConfigs.PrivateDnsZoneId.ToLower() -contains $newZone.ResourceId.ToLower())) {
+    if (!$shouldProceed -and !($existingGroup.PrivateDnsZoneConfigs.PrivateDnsZoneId.ToLower() -contains $newZone.ResourceId.toLower())) {
         
         Write-Host "[Step 4 under section 'How to migrate to the new private DNS zone' in migration document]" -ForegroundColor Yellow
-        return AskForConfirmation "Private endpoint '$($privateLink.Name)' is already tied to a Dns zone group (A record) that is not associated with this DNS Zone. Do you want to remove the existing group and add a new one?"
+        return AskForConfirmation "Private endpoint '$($privateLink.Name)' already has a DNS zone group, but the new DNS zone is not associated with that group. Do you want to remove the existing group from this private endpoint and add a new one that includes the new DNS zone so that the A record will be managed automatically?"
     }
     $peIpAddresses = ((Get-AzNetworkInterface -ResourceId $privateLink.NetworkInterfaces.Id).IpConfigurations.PrivateIPAddress)
     $zoneARecordIpAddresses = ($newZone | Get-AzPrivateDnsRecordSet | Where-Object RecordType -eq A).Records.Ipv4Address
-    if (!($zoneARecordIpAddresses -contains $peIpAddresses)) {
+    if (!$shouldProceed -and !($zoneARecordIpAddresses -contains $peIpAddresses)) {
         
         Write-Host "[Step 4 under section 'How to migrate to the new private DNS zone' in migration document]" -ForegroundColor Yellow
-        return AskForConfirmation "Private endpoint '$($privateLink.Name)' has an IP address of $($peIpAddresses) which is not contained in the private DNS zones list of A records which include [$($zoneARecordIpAddresses -join ", ")]? Do you want to and add a new one Dns zone group to fix this?"
+        return AskForConfirmation "Private endpoint '$($privateLink.Name)' has an IP address of $($peIpAddresses), which is not in the private DNS zone's list of A records: [$($zoneARecordIpAddresses -join ", ")]? Do you want to add a new DNS zone group to the private endpoint to fix this?"
     }
     return $false
 }
