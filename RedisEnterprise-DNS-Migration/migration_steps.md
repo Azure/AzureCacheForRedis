@@ -10,7 +10,9 @@ This document is meant to help you migrate from an old form of the Private DNS Z
     ```{region}.privatelink.redisenterprise.cache.azure.net```
 
 2. For each of these VNets, create a new private DNS zone with the
-    name: privatelink.redisenterprise.cache.azure.net
+    name:
+    
+    ```privatelink.redisenterprise.cache.azure.net```
 
 3. Establish a **Virtual network link** between your VNet and the newly
     created zone.
