@@ -1,143 +1,79 @@
-# Introducing AzureRedisEvents channel
+# Azure Cache for Redis Server Maintenance Events
 
-A lot of customers have asked us for the ability to know about upcoming maintenance so that they can handle downtime/connection blips more gracefully.
+## Overview
 
-*AzureRedisEvents* is the new Pub/Sub channel we are introducing that publishes notifications during planned maintenance events.
+Maintenance events are for applications with high performance requirements, which need to take advanced action (such as using circuit breakers to bypass the cache) whenever maintenance is planned for the Redis server. For example, an application might route traffic away from the cache during the maintenance operation, and instead send it directly to a persistent store.
+
+In most cases, your application doesn't need to subscribe to AzureRedisEvents or respond to notifications. Instead, we recommend implementing [building in resilience](https://docs.microsoft.com/en-us/azure/azure-cache-for-redis/cache-failover#build-in-resiliency).
+
+With sufficient resilience, applications gracefully handle any brief connection loss or cache unavailability like that experienced during node maintenance. It’s also possible that your application might unexpectedly lose its connection to the cache without warning from AzureRedisEvents because of network errors or other events.
+
+The AzureRedisEvents channel isn't a mechanism that can notify you days or hours in advance. Maintenance events aren't intended to allow time for a person to be alerted and take manual action, and most of them will be fired within minutes or seconds of maintenance.
+
+We only recommend subscribing to AzureRedisEvents in a few noteworthy cases:
+
+* Applications with extreme performance requirements, where even minor delays must be avoided. In such scenarios, traffic could be seamlessly rerouted to a backup cache before maintenance begins on the current cache.
+* Applications that explicitly read data from replica rather than primary nodes. During maintenance on a replica node, the application could temporarily switch to read data from primary nodes.
+* Applications that can't risk write operations failing silently or succeeding without confirmation, which can happen as connections are being closed for maintenance. If those cases would result in dangerous data loss, the application can proactively pause or redirect write commands before the maintenance is scheduled to begin.
+
+## Types of events
+
+AzureRedisEvents currently sends the following notifications:
+* `NodeMaintenanceScheduled`: Indicates that a maintenance event is scheduled. Usually between 10-15 minutes in advance.
+* `NodeMaintenanceStarting`: Fired ~20s before maintenance begins
+* `NodeMaintenanceStart`: Fired when maintenance is imminent (<5s)
+* `NodeMaintenanceFailoverComplete`: Indicates that a replica has been promoted to primary
+* `NodeMaintenanceEnded`: Indicates that the node maintenance operation is over
+
+## Subscribing to the channel
+
+If you are using C#, we recommend relying on the StackExchange.Redis library. It will automatically subscribe to the pub/sub channel and raise the ServerMaintenanceEvent in response to maintenance. For more information, please see the [StackExchange.Redis documentation](https://github.com/StackExchange/StackExchange.Redis/blob/main/docs/ServerMaintenanceEvent.md).
+
+For other client libraries, you will need to subscribe to the AzureRedisEvents pub/sub channel and implement logic to parse incoming maintenance event messages.
 
 ## Message format
 
-Each entry in the message is separated by using a pipe (|) as a delimiter. All messages start with a *FieldName* followed by the *Entry* for the field and so on so forth.
+Messages sent by Azure Redis are pipe (|) delimited strings. All messages start with a FieldName followed by the Entry for the field, followed by additional pairs of field names and entries.
 
 ---
     NotificationType|{NotificationType}|StartTimeInUTC|{StartTimeInUTC}|IsReplica|{IsReplica}|IPAddress|{IPAddress}|SSLPort|{SSLPort}|NonSSLPort|{NonSSLPort}
 ---
 
-You can use the following C# sample class to parse the message into a simple AzureRedisEvent type.
-
-    public class AzureRedisEvent
-    {
-        public AzureRedisEvent(string message)
-        {        
-            try
-            {
-                var info = message?.Split('|');
-                for (int i = 0; i < info?.Length / 2; i++)
-                {
-                    string key = null, value = null;
-                    if (2 * i < info.Length) { key = info[2 * i].Trim(); }
-                    if (2 * i + 1 < info.Length) { value = info[2 * i + 1].Trim(); }
-                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
-                    {
-                        switch (key.ToLowerInvariant())
-                        {
-                            case "notificationtype":
-                                NotificationType = value;
-                                break;
-                            case "starttimeinutc":
-                                DateTimeOffset.TryParse(value, out StartTime);
-                                break;
-                            case "isreplica":
-                                bool.TryParse(value, out IsReplica);
-                                break;
-                            case "ipaddress":
-                                IPAddress.TryParse(value, out IpAddress);
-                                break;
-                            case "sslport":
-                                Int32.TryParse(value, out var port);
-                                break;
-                            case "nonsslport":
-                                Int32.TryParse(value, out var nonsslport);
-                                break;
-                            default:
-                                Console.WriteLine($"Unexpected i={i}, case {key}");
-                                break;
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                ....
-            }
-            
-            
-        }
-        public readonly string NotificationType;
-        public readonly DateTime StartTimeInUTC;
-        public readonly bool IsReplica;
-        public readonly string IPAddress;
-        public readonly int SSLPort;
-        public readonly int NonSSLPort;
-    }
-
-### `NodeMaintenanceStarting message`
-
-*NodeMaintenanceStarting* messages are published 30 seconds ahead of upcoming maintenance - which usually means that one of the nodes (primary/replica) is going to be down for Standard/Premier Sku caches. 
-
-It's important to understand that this does *not* mean downtime if you are using a Standard/Premier sku caches. Rather, it means there is going be a failover that will disconnect existing connections going through the LB port (6380/6379) or directly to the node (15000/15001) and operations might fail until these connections reconnect.
-
-In the case of clustered nodes, you might have to stop sending read/write operations to this node until it comes back up and use the node which will have been promoted to primary. For basic sku only, this will mean complete downtime until the update finishes.
-
-One of the things that can be done to reduce impact of connection blips would be to stop sending operations to the cache a second before the *StartTimeinUTC* until the connection is restored which typically takes less than a second in most clients like StackExchange.Redis and Lettuce.
-
-### `NodeMaintenanceEnded` message
-
-Similarly, there will be a notification message that is received when the maintenance ends that will sent through the *AzureRedisEvents* channel. You do *NOT* need to wait for this message to use the LB endpoint. The LB endpoint is always available. However, we included this for logging purposes or for customers who use the replica endpoint in clusters for read workloads.
-
 ## Walking through a sample maintenance event
 
-1. App is connected to Redis and everything is working fine. 
+1. App is connected to Redis and everything is functioning normally.
+2. Current Time: [16:21:39] -> `NodeMaintenanceScheduled` message is received, with a `StartTimeInUTC` of 16:35:57 (about 14 minutes from current time).
+    * Note: the start time for this event is an approximation, because we will start getting ready for the update proactively and the node may become unavailable up to 3 minutes sooner. We recommend listening for `NodeMaintenanceStarting` and `NodeMaintenanceStart` for the highest level of accuracy (these are only likely to differ by a few seconds at most).
+3. Current Time: [16:34:26] -> `NodeMaintenanceStarting` message is received, and `StartTimeInUTC` is 16:34:46, about 20 seconds from the current time.
+4. Current Time: [16:34:46] -> `NodeMaintenanceStart` message is received, so we know the node maintenance is about to happen. We break the circuit and stop sending new operations to the Redis connection. (Note: the appropriate action for your application may be different.)
+5. Current Time: [16:34:47] -> The connection is closed by the Redis server.
+6. Current Time: [16:34:56] -> `NodeMaintenanceFailoverComplete` message is received. This tells us that the replica node has promoted itself to primary, so the other node can go offline for maintenance. Note that this message will only be fired if the primary is undergoing maintenance, as replica node maintenance does not result in failover.
+7. Current Time [16:34:56] -> The connection to the Redis server is restored. It is safe to send commands again to the connection and all commands will succeed.
+8. Current Time [16:37:48] -> `NodeMaintenanceEnded` message is received, with a `StartTimeInUTC` of 16:37:48. Nothing to do here if you are talking to the load balancer endpoint (port 6380 or 6379). For clustered servers, you can resume sending readonly workloads to the replica(s).
 
-2. Current Time: [16:25:40] -> Message received through *AzureRedisEvents* channel. The message notification type is "NodeMaintenanceStarting" and StartTimeInUTC is "16:26:10" (about 30 seconds from current time). So we wait. 
 
-        NotificationType|NodeMaintenanceStarting|StartTimeInUTC|2020-10-14T16:26:10|IsReplica|False|IPAddress|52.158.249.185|SSLPort|15001|NonSSLPort|13001
+##  Event details
 
-3. Current Time: [16:26:09] -> This is one second before the maintenance events. We break the circuit and stop sending new operations to the Redis object.
+#### NodeMaintenanceScheduled event
 
-4. Current Time: [16:26:10] -> The Redis object is disconnected from the Redis server. You can listen to these ConnectionDisconnected events from most clients [StackExchange Events](<https://stackexchange.github.io/StackExchange.Redis/Events>) or [Lettuce Events](<https://github.com/lettuce-io/lettuce-core/wiki/Connection-Events#connection-events>).
+`NodeMaintenanceScheduled` events are raised for infrastructure maintenance scheduled by Azure, up to 15 minutes in advance. This event will not be fired for user-initiated reboots, or for monthly patching.
 
-5. Current Time [16:26:10] -> The Redis object is reconnected back to the Redis server (again, you can listen to the Reconnected event on your client). It is safe to send ops again to the Redis connection and all ops will succeed.
+#### NodeMaintenanceStarting event
 
-6. Current Time [16:27:42] -> Message received through *AzureRedisEvents* channel. The message notification type is "NodeMaintenanceEnded" and StartTimeInUTC is "16:27:42". Nothing to do here if you are talking to 6380/6379. For clustered caches, you can start sending readonly workloads to the replica. 
+`NodeMaintenanceStarting` events are raised ~20 seconds ahead of upcoming maintenance. This means that one of the primary or replica nodes will be going down for maintenance.
 
-        NotificationType|NodeMaintenanceEnded|StartTimeInUTC|2020-10-14T16:27:42|IsReplica|True|IPAddress|52.158.249.185|SSLPort|15001|NonSSLPort|13001
+It's important to understand that this does *not* mean downtime if you are using a Standard/Premier SKU cache. If the replica is targeted for maintenance, disruptions should be minimal. If the primary node is the one going down for maintenance, a failover will occur, which will close existing connections going through the load balancer port (6380/6379) or directly to the node (15000/15001). You may want to pause sending write commands until the replica node has assumed the primary role and the failover is complete.
 
-## Sample code to listen to the *AzureRedisEvents* 
+#### NodeMaintenanceStart event
 
-            var sub = multiplexer.GetSubscriber();
-            var failover = sub.SubscribeAsync("AzureRedisEvents", async (channel, message) =>
-            {
-                Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] { message }");
-                var newMessage = new AzureRedisEvent(message);
-                if (newMessage.NotificationType == "NodeMaintenanceStarting")
-                {
-                    var delay = newMessage.StartTimeInUTC.Subtract(DateTime.UtcNow) - TimeSpan.FromSeconds(1);
-                    Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] Waiting for {delay.TotalSeconds} seconds before breaking circuit");
-                    await Task.Delay(delay);
-                    Console.WriteLine($"[{DateTime.UtcNow:hh.mm.ss.ffff}] Breaking circuit since update coming at {newMessage.StartTimeInUTC}");
-                }
-            });
+`NodeMaintenanceStart` events are raised when maintenance is imminent (within seconds). These messages do not include a `StartTimeInUTC` because they are fired immediately before maintenance occurs.
 
-### Clustered cache: targeted circuit breaking for StackExchange.Redis
+#### NodeMaintenanceFailoverComplete event
 
-In the case of clustered caches, since only one of the shards is going to have availability issues at a time. It is possible to only stop calls going to the specific shard instead of all the calls. You can do this by hashing the key and figuring out the endpoint. Below is a snippet to figure out how to hash keys and stop them when they are headed to the failiing shard. 
+`NodeMaintenanceFailoverComplete` events are raised when a replica has promoted itself to primary. These events do not include a `StartTimeInUTC` because the action has already occurred. Note that this message will only be fired if the primary is undergoing maintenance, as replica node maintenance does not result in failover.
 
-You can start sending requests again to this shard after the client application detects the new configuration. This can usually take anywhere from 1 second to 30-40 seconds. To improve this, you need to enable periodic configuration refresh on [Lettuce](<https://github.com/lettuce-io/lettuce-core/wiki/Client-options#cluster-specific-options>) and set refreshPeriod interval to preferably less than 3 seconds. On StackExchange.Redis, [configCheckSeconds](<https://stackexchange.github.io/StackExchange.Redis/Configuration>). should be set to  less than 3 seconds.
+StackExchange.Redis will automatically refresh its view of the cluster topology in response to this event, and we recommend that client applications implementing their own logic do the same. 
 
-So after 2 seconds (or whatever your refresh period), you should be able to send requests to this shard without getting any exceptions. 
+#### NodeMaintenanceEnded event
 
-            var multiplexer = ConnectionMultiplexer.Connect(configuration);
-            // Ideally clusterConfig is stored and not executed every single time, since it can be expensive
-            var lastKnownClusterConfig = multiplexer.GetServer(configuration.EndPoints.FirstOrDefault()).ClusterNodes();
-
-            var endpoint = (System.Net.IPEndPoint) lastKnownClusterConfig.GetBySlot(key).EndPoint;
-            
-            // Figure out the shardId from Port number
-            // Use 13000 instead of 15000 below if communicating over non-SSL
-            var shardId = (endpoint.Port - 15000) / 2;
-
-            // Compare this to the shardId of the failing endpoint (SSLPort - 15000)/2  from the AzureRedisEvent above
-            if (shardId == failingShardId) 
-            {
-                // Don't send the operation.
-            }
+`NodeMaintenanceEnded` events are raised to indicate that the maintenance operation has completed and that the replica is once again available. You do *NOT* need to wait for this event to use the load balancer endpoint, as it is available throughout. However, we included this for logging purposes and for customers who use the replica endpoint in clusters for read workloads.
