@@ -79,13 +79,13 @@ We use the following map to resolve Node addresses back to the host name.
         Function<HostAndPort, HostAndPort> mappingFunction = new Function<HostAndPort, HostAndPort>() {
             @Override
             public HostAndPort apply(HostAndPort hostAndPort) {
-                InetAddress[] addresses = new InetAddress[0];
+                String cacheIP = "";
                 try {
-                    addresses = DnsResolvers.JVM_DEFAULT.resolve(host);
+                    InetAddress[] addresses = DnsResolvers.JVM_DEFAULT.resolve(host);
+                    cacheIP = addresses[0].getHostAddress();
                 } catch (UnknownHostException e) {
                     e.printStackTrace();
                 }
-                String cacheIP = addresses[0].getHostAddress();
                 HostAndPort finalAddress = hostAndPort;
 
                 if (hostAndPort.hostText.equals(cacheIP))
