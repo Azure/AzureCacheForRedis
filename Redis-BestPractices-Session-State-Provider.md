@@ -4,24 +4,25 @@
 
 1. **Enable session state only on required pages** - This will avoid known session state provider performance problems.
 
-- You can disable session state by setting the [web.config enableSessionState option](https://msdn.microsoft.com/en-us/library/950xf363(v=vs.85).aspx) to **false**.
+   - You can disable session state by setting the [web.config enableSessionState option](https://msdn.microsoft.com/en-us/library/950xf363(v=vs.85).aspx) to **false**.
 
-    ```xml
-       <system.web>
-         <pages enableSessionState=false>
-    ```
+      ```xml
+      <system.web>
+      <pages enableSessionState=false>
+      ```
 
-  - You can enable it on specific pages by setting the [page directive's EnableSessionState option](https://msdn.microsoft.com/en-us/library/ydy4x04a(v=vs.100).aspx) to **true**
+   - You can enable it on specific pages by setting the [page directive's EnableSessionState option](https://msdn.microsoft.com/en-us/library/ydy4x04a(v=vs.100).aspx) to **true**
 
-    ```xml
-       <%@ Page EnableSessionState=true %>
-    ```
+      ```xml
+      <%@ Page EnableSessionState=true %>
+      ```
 
-  - Mark pages using Session State as **ReadOnly** whenever possible - this helps avoid locking contention.
+   - Mark pages using Session State as **ReadOnly** whenever possible - this helps avoid locking contention.
 
-    ```xml
-       <%@ Page EnableSessionState=ReadOnly %>
-    ```
+      ```xml
+            
+      <%@ Page EnableSessionState=ReadOnly %>
+      ```
 
 1. **Avoid Session State (or at least use ReadOnly) on pages that have long load times** - When a page with write-access to the session state takes a long time to load, it will hold the lock for that session until the load completes.  This can prevent other requests for other pages for the same session from loading.  Also, the session state module in ASP.NET will, in the background, continue to ask for the session lock for any additional requests for that same session until the lock is available or until the executionTime is exceeded for the lock.  This can generate additional load on your session state store.
 
