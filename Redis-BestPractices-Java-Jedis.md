@@ -1,10 +1,5 @@
 # Jedis Java Client
 
-## Jedis instances are single threaded
-
-* Don't use the same Jedis connection instance from multiple threads at the same time.
-* Using the same Jedis instance from multiple threads at the same time will result in socket connection errors/resets or strange error messages like "[expected \'$\' but got \' \'](https://github.com/xetorthio/jedis/issues/1358)".
-
 ## Use JedisPool
 
 * This allows you to talk to redis from multiple threads while still getting the benefits of reused connections.

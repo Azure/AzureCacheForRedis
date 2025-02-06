@@ -2,18 +2,9 @@
 
 ## Avoid Idle Connections
 
-Azure Redis currently has 10 minute idle timeout for connections, which will cause short network blips if your connection has long periods of inactivity.  The most common Node.js libraries should automatically reconnect.  
+Azure Redis currently has 10 minute idle timeout for connections, which can cause short network blips if your connection has long periods of inactivity. The most common Node.js libraries should automatically reconnect.
 
-However, you can avoid this brief connectivity loss if your application sends a [PING command](http://redis.io/commands/ping) on connections to prevent them from being idle.  Some client libraries send this ping automatically.  
-
-At the time of this writing, the node.js redis client library I tested (node_redis) did NOT do this automatically.  You can do this yourself by adding a timer that sends PING command every minute or two.  Below is an example of how to do this.  
-
-```Node.js
-    setInterval(function(){
-     console.log('redisClient => Sending Ping...');
-     redisClient.ping();
-    }, 60000); // 60 seconds
-```
+However, you can avoid this brief connectivity loss if you use `pingInterval` in the [createClient configuration](https://github.com/redis/node-redis/blob/259e9b2e1f184d5e83413a73a88bda85de814ac0/docs/client-configuration.md#createclient-configuration) to prevent them from being idle. Some client libraries send this ping automatically.  
 
 ## Recreate the Connection
 
