@@ -4,16 +4,14 @@ Lettuce is one of the most popular Redis clients for Java. A lot of our customer
 
 Lettuce is great out of the box, especially for a non-clustered Redis. However, we found that it can be less than ideal for clustered caches on Azure. This can be improved greatly using a few configurations - making the experience a lot smoother and better, especially during updates.
 
-
-## How do I get started Lettuce on Azure for a simple non-clustered caches.
+## How to get started Lettuce on Azure for a simple non-clustered caches
 
 This is rather simple. To get started you need:
 
-1. The Redis connection string, which can be found on the Azure Portal. This contains host, password and port information. 
+1. The Redis connection string, which can be found on the Azure Portal. This contains host, password and port information.
 2. Install the latest version of Lettuce in your project and simply use the code snippet below to get started. That's all!
 
-
-### Code snippet to get started on Lettuce with Azure.
+### Code snippet to get started on Lettuce with Azure
 
         // In a production server, the value of host/password will be gotten from Keyvault or other 
         // secret manager. However for code simplicity, these are local here. 
@@ -39,23 +37,20 @@ This is rather simple. To get started you need:
         RedisCommands<String,String> syncCommands = connection.sync();
         RedisAsyncCommands<String,String> asyncCommands = connection.async();
 
+That's it. As expected, getting started with Lettuce on Azure Redis is rather simple and since Lettuce relies on Netty for the connection management, it tends to be pretty reliable for non-clustered caches.
 
-That's it. As expected, getting started with Lettuce on Azure Redis is rather simple and since Lettuce relies on Netty for the connection management, it tends to be pretty reliable for non-clustered caches. 
+## Getting started with Lettuce on Azure for clustered caches
 
+Using Lettuce with Azure Redis Clustered caches is reasonably easy but doing it properly takes few more extra steps.
 
-## Getting started with Lettuce on Azure for clustered caches. 
+The simple solution is not that different from the non-clustered case where you just inititiate the RedisURI and create a clustered client. However, there are few things that need to be changed.
 
-Using Lettuce with Azure Redis Clustered caches is reasonably easy but doing it properly takes few more extra steps. 
+### Extra configuration required in clustered caches
 
-The simple solution is not that different from the non-clustered case where you just inititiate the RedisURI and create a clustered client. However, there are few things that need to be changed. 
+1. Changes to make certificate verification to work properly with Azure SSL connections.
+2. Detecting Cluster configuration changes to avoid downtime during Redis updates.
 
-#### Extra configuration required in clustered caches:
-
-1. Changes to make certificate verification to work properly with Azure SSL connections. 
-2. Detecting Cluster configuration changes to avoid downtime during Redis updates. 
-
-
-##### Creating the RedisURI from the connection string
+#### Creating the RedisURI from the connection string
 
         // In a production server, the value of host/password will be gotten from Keyvault or other 
         // secret manager. However for code simplicity, these are local here. 
@@ -70,11 +65,11 @@ The simple solution is not that different from the non-clustered case where you 
                 .withPort(6380)
                 .build();
 
+#### Creating a MappingSocketAddressResolver for mapping Host <--> IP
 
-##### Creating a MappingSocketAddressResolver for mapping Host <--> IP
-The reason this is required is because SSL certification validates the address of the Redis Nodes with the SAN (Subject Alternative Names) in the SSL certificate. Redis protocol requires that these node addresses should be IP addresses. However, the SANs in the Azure Redis SSL certificates contains only the Hostname since Public IP addresses can change and as a result not completely secure. 
+The reason this is required is because SSL certification validates the address of the Redis Nodes with the SAN (Subject Alternative Names) in the SSL certificate. Redis protocol requires that these node addresses should be IP addresses. However, the SANs in the Azure Redis SSL certificates contains only the Hostname since Public IP addresses can change and as a result not completely secure.
 
-We use the following map to resolve Node addresses back to the host name. 
+We use the following map to resolve Node addresses back to the host name.
 
         Function<HostAndPort, HostAndPort> mappingFunction = new Function<HostAndPort, HostAndPort>() {
             @Override
@@ -99,11 +94,10 @@ We use the following map to resolve Node addresses back to the host name.
         ClientResources res =  DefaultClientResources.builder()
                 .socketAddressResolver(resolver).build();
 
+#### Creating a client with the above mapping and Cluster specific settings
 
-##### Creating a client with the above mapping and Cluster specific settings. 
-Here we create the RedisClusterClient with the RedisURI and the Client resources object from above. 
-After that we create Cluster specific settings to detect configuration changes quickly. This helps to recover quickly in case of updates or failovers that can happen. 
-
+Here we create the RedisClusterClient with the RedisURI and the Client resources object from above.
+After that we create Cluster specific settings to detect configuration changes quickly. This helps to recover quickly in case of updates or failovers that can happen.
 
         RedisClusterClient redisClient = RedisClusterClient.create(res, redisURI);    
 
@@ -123,10 +117,4 @@ After that we create Cluster specific settings to detect configuration changes q
         RedisAdvancedClusterCommands<String, String> syncCommands = connection.sync();
         RedisAdvancedClusterAsyncCommands<String, String> asyncCommands = connection.async();
 
-
-With the cluster settings configure above, the number of errors seen during failovers are very minimal and should be a lot better the default experience. 
-
-
-
-
-
+With the cluster settings configure above, the number of errors seen during failovers are very minimal and should be a lot better the default experience.

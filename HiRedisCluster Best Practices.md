@@ -1,57 +1,53 @@
 # Best practices for using Azure Cache for Redis with HiRedisCluster
 
-## Improving Pipelining.
+## Improving Pipelining
 
     Hireredis-cluster supports manually batching of requests to enhance pipelining.  Following is a sample code with pipelining of 4 requests.
 
-### Code snippet to get started on HiRedisCluster with Azure.
+### Code snippet to get started on HiRedisCluster with Azure
 
-       	redisClusterAppendCommand(conn, "SET %s %s", "test", "value");
-		redisClusterAppendCommand(conn, "SET %s %s", "key", "value");
-		redisClusterAppendCommand(conn, "GET %s", "test");
-		redisClusterAppendCommand(conn, "GET %s", "key");
-		for (size_t i = 0; i < 4; i++)
-		{
-		    redisClusterGetReply(conn,(void **) &reply[i]);
-		    freeReplyObject(reply[i]);
+        redisClusterAppendCommand(conn, "SET %s %s", "test", "value");
+  redisClusterAppendCommand(conn, "SET %s %s", "key", "value");
+  redisClusterAppendCommand(conn, "GET %s", "test");
+  redisClusterAppendCommand(conn, "GET %s", "key");
+  for (size_t i = 0; i < 4; i++)
+  {
+      redisClusterGetReply(conn,(void **) &reply[i]);
+      freeReplyObject(reply[i]);
         }
         redisClusterReset(conn);
 
+## Leveraging Replica node for GET requests
 
-## Leveraging Replica node for GET requests. 
-
-### Following is a code sample that I have written to send writes to primary and reads to replica node. With synthetic benchmarking, I was able to get higher throughput by distributing the load across nodes of a shard.
+### Following is a code sample that written to send _writes_ to primary and _reads_ to replica node. With synthetic benchmarking, you can  get higher throughput by distributing the load across nodes of a shard
 
             redisClusterSetOptionParseSlaves(cc[i]);
-	        redisClusterConnect2(cc[i]);
-	 
-		    cluster_node *node1 = redisClusterGetNodeByKey(conn, "test");
-		    cluster_node *replica1 = getReplica(node1);
-		    
-		    cluster_node *node2 = redisClusterGetNodeByKey(conn, "key");
-		    cluster_node *replica2 = getReplica(node2);
-		    redisClusterCommandToNode(conn, replica1, "READONLY");
-		    redisClusterCommandToNode(conn, replica2, "READONLY");
-		         redisReply *reply =
-		            (redisReply *)redisClusterCommandToNode(conn, node1, "SET %s %s", "test1", "value");
-		 
-		        freeReplyObject(reply);
-		        redisReply *reply1 =
-		            (redisReply *)redisClusterCommandToNode(conn, node2, "SET %s %s", "test2", "value");
-		        freeReplyObject(reply1);
-		        
-		        redisReply *reply2 = (redisReply *)redisClusterCommandToNode(conn, replica1, "GET %s", "test1");
-		        freeReplyObject(reply2);
-		        redisReply *reply3 = (redisReply *)redisClusterCommandToNode(conn, replica2, "GET %s", "test2");
+         redisClusterConnect2(cc[i]);
+  
+      cluster_node *node1 = redisClusterGetNodeByKey(conn, "test");
+      cluster_node *replica1 = getReplica(node1);
+      
+      cluster_node *node2 = redisClusterGetNodeByKey(conn, "key");
+      cluster_node *replica2 = getReplica(node2);
+      redisClusterCommandToNode(conn, replica1, "READONLY");
+      redisClusterCommandToNode(conn, replica2, "READONLY");
+           redisReply *reply =
+              (redisReply *)redisClusterCommandToNode(conn, node1, "SET %s %s", "test1", "value");
+   
+          freeReplyObject(reply);
+          redisReply *reply1 =
+              (redisReply *)redisClusterCommandToNode(conn, node2, "SET %s %s", "test2", "value");
+          freeReplyObject(reply1);
+          
+          redisReply *reply2 = (redisReply *)redisClusterCommandToNode(conn, replica1, "GET %s", "test1");
+          freeReplyObject(reply2);
+          redisReply *reply3 = (redisReply *)redisClusterCommandToNode(conn, replica2, "GET %s", "test2");
             freeReplyObject(reply3);
 
         Note (not included in the sample above) when reading from replica node your client application needs to ensure to fallback to primary node in case replica isn't connected. 
-		We recommend testing fallback to primary logic on a dev/stage cache by rebooting replica node. Similarly, we recommend testing reconnection logic during maintenance event on a dev/stage cache by rebooting the primary node.
+  We recommend testing fallback to primary logic on a dev/stage cache by rebooting replica node. Similarly, we recommend testing reconnection logic during maintenance event on a dev/stage cache by rebooting the primary node.
 
-
-
-
-### Full Code 
+### Full Code
 
         #include "hircluster.h"
         #include <stdio.h>
