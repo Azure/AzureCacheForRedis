@@ -4,7 +4,6 @@ import javax.net.ssl.SSLSession;
 import redis.clients.jedis.*;
 import javax.net.ssl.*;
 
-// Source Code Usage License: https://gist.github.com/JonCole/34ca1d2698da7a1aa65ff781c37ecdea
 public class Redis {
     private static Object staticLock = new Object();
     private static JedisPool pool;
