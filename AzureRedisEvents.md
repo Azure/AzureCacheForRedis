@@ -6,7 +6,10 @@ Maintenance notifications give your Redis client application some visibility int
 
 Maintenance notifications are not intended to give hours or days of advance notice of upcoming maintenance. They're suitable for triggering actions within your Redis client application, rather than firing an alert that a person can respond to manually before the maintenance occurs. 
 
-Notifications are delivered to client applications via a standard [Redis pub/sub](https://redis.io/topics/pubsub) channel. Most Redis client libraries support subscribing to pub/sub channels, so the notifications can be easily consumed in any client application with a connection to the cache. Notifications aren't available through any other mechanism outside of a Redis client application. 
+Notifications are delivered to client applications via a standard [Redis pub/sub](https://redis.io/topics/pubsub) channel. Most Redis client libraries support subscribing to pub/sub channels, so the notifications can be easily consumed in any client application with a connection to the cache. Notifications aren't available through any other mechanism outside of a Redis client application. By design, Redis pub/sub technology cannot guarantee that every client receives every message published. Additionally, these notifications are being sent around times when Redis infrastructure is undergoing changes and client connections are being reset, which may further reduce their reliabilty. Therefore we do not recommend taking a dependency on maintenance notifications that relies on them being received every time a Redis cache is impacted. 
+
+Note that by design, Redis pub/sub message cannot be guaranteed 
+
 
 ## Applicable Scenarios
 
